@@ -1,0 +1,114 @@
+### Fitness platform — sample requests (VS Code "REST Client" or JetBrains HTTP Client)
+### Run top to bottom. Paste ids/tokens into the variables below as you go.
+
+@gateway = http://localhost:3000/api
+@memberToken = <paste accessToken from register/login>
+@adminToken = <paste accessToken of the admin>
+@trainerToken = <paste accessToken of the trainer (log in AFTER promotion)>
+@trainerId = <paste member id of the trainer>
+@classId = <paste class id>
+@bookingId = <paste booking id>
+
+### Health of all services
+GET http://localhost:3000/health/services
+
+### Register a member
+POST {{gateway}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "alice@gym.com",
+  "password": "Password123",
+  "firstName": "Alice",
+  "lastName": "Lift",
+  "membershipPlan": "basic"
+}
+
+### Register a future trainer
+POST {{gateway}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "bob@gym.com",
+  "password": "Password123",
+  "firstName": "Bob",
+  "lastName": "Burpee"
+}
+
+### Login (admin created via `npm run create-admin -w member-service -- admin@gym.com AdminPass123`)
+POST {{gateway}}/auth/login
+Content-Type: application/json
+
+{ "email": "admin@gym.com", "password": "AdminPass123" }
+
+### My profile
+GET {{gateway}}/members/me
+Authorization: Bearer {{memberToken}}
+
+### Upgrade my plan  (emits member.updated)
+PATCH {{gateway}}/members/me
+Authorization: Bearer {{memberToken}}
+Content-Type: application/json
+
+{ "membershipPlan": "premium" }
+
+### Admin: promote Bob to trainer (emits member.updated → class-service trainers)
+PATCH {{gateway}}/members/{{trainerId}}/role
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "role": "trainer" }
+
+### Admin: list members
+GET {{gateway}}/members?page=1&pageSize=20
+Authorization: Bearer {{adminToken}}
+
+### Public: trainers (read model fed by Kafka)
+GET {{gateway}}/trainers
+
+### Trainer: schedule a class (emits class.scheduled)
+POST {{gateway}}/classes
+Authorization: Bearer {{trainerToken}}
+Content-Type: application/json
+
+{
+  "title": "Morning HIIT",
+  "description": "45 minutes of high intensity intervals",
+  "category": "hiit",
+  "room": "Studio A",
+  "startsAt": "2030-01-15T07:00:00.000Z",
+  "durationMinutes": 45,
+  "capacity": 12
+}
+
+### Public: upcoming classes
+GET {{gateway}}/classes?category=hiit
+
+### Public: one class (bookedCount is updated from booking events)
+GET {{gateway}}/classes/{{classId}}
+
+### Member: book a class (emits booking.confirmed)
+POST {{gateway}}/bookings
+Authorization: Bearer {{memberToken}}
+Content-Type: application/json
+
+{ "classId": "{{classId}}" }
+
+### Member: my bookings
+GET {{gateway}}/bookings/me
+Authorization: Bearer {{memberToken}}
+
+### Member: cancel a booking (emits booking.cancelled)
+PATCH {{gateway}}/bookings/{{bookingId}}/cancel
+Authorization: Bearer {{memberToken}}
+
+### Trainer: class roster
+GET {{gateway}}/bookings?classId={{classId}}&status=confirmed
+Authorization: Bearer {{trainerToken}}
+
+### Trainer: cancel the class (class.cancelled → bookings cancelled → booked_count reset)
+PATCH {{gateway}}/classes/{{classId}}/cancel
+Authorization: Bearer {{trainerToken}}
+Content-Type: application/json
+
+{ "reason": "Trainer is sick" }

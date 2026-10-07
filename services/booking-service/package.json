@@ -1,0 +1,17 @@
+{
+  "name": "booking-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Class bookings with capacity & membership-plan rules. Publishes booking events, consumes member and class events.",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "migrate": "node src/db/migrate.js"
+  },
+  "dependencies": {
+    "@fitness/common": "*",
+    "express": "^5.1.0",
+    "zod": "^3.24.1"
+  }
+}
